@@ -10,5 +10,8 @@ Steps:
   - cell recognition
 - [ ] Letters on the tiles 
 - [ ] Algorithm to check for words
+  - If a word created is invalid, undo everything done in that turn
+  - save scoring for after the word is verified
+  - system to identify if all words created with the new tiles are valid
 - [ ] Points system (consumable bonus tiles)
 - [ ] Two-player turn-based system

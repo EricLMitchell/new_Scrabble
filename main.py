@@ -3,12 +3,12 @@ from enum import Enum
 
 # Screen setup
 screen_width = 900
-screen_height = int(screen_width * (2/3))
+screen_height = int(screen_width * (2 / 3))
 screen = Screen(screen_width, screen_height, "Scrabble")
 
 # size classification
 TILE_SIZE = screen_width / 25
-BOARD_DIMENSION = 15  # rename this variable
+BOARD_DIMENSION = 15  # dimension value in number of cells
 
 # calculate screen margins
 screen_x_margin = screen_width - (BOARD_DIMENSION * TILE_SIZE)
@@ -39,13 +39,17 @@ class Cell:
             else:
                 return ''
 
-    bonus_colors_dict = {
-        Bonus.NONE: Color('white'),
-        Bonus.DOUBLE_LETTER: Color('cyan'),
-        Bonus.TRIPLE_LETTER: Color('blue'),
-        Bonus.DOUBLE_WORD: Color('salmon'),
-        Bonus.TRIPLE_WORD: Color('red')
-    }
+        def color(self):
+            if self.name == 'DOUBLE_LETTER':
+                return Color('cyan')
+            elif self.name == 'TRIPLE_LETTER':
+                return Color('blue')
+            elif self.name == 'DOUBLE_WORD':
+                return Color('salmon')
+            elif self.name == 'TRIPLE_WORD':
+                return Color('red')
+            else:
+                return Color('white')
 
     def __init__(self, screen, x, y, cell_width, cell_height, bonus):
         self.screen = screen
@@ -60,15 +64,32 @@ class Cell:
 
         # make the cell
         self.cell = Rectangle(self.screen, self.x, self.y, self.cell_width, self.cell_height,
-                              color=Cell.bonus_colors_dict[self.bonus], border=Color('black'))
+                              color=self.bonus.color(), border=Color('black'))
 
         # center on the object
         self.text = Text(self.screen, self.bonus.text(), self.x, self.y, size=16, bold=True)
         self.text.center(self.cell.center())
 
+    def set_color(self, color):
+        """
+        Set the color of an individual cell
+        :param color: Color() from pydraw
+        :return: N/A
+        """
+        self.cell.color(color)
+
+    def get_x(self):
+        return self.cell.x()
+
+    def get_y(self):
+        return self.cell.y()
+
+    def get_center(self):
+        return self.cell.center()
+
 
 class Grid:
-    # dictionary storing the bonus values of all the tiles
+    # dictionary storing which cell locations correspond to bonus values
     bonuses_dict = {
         # DOUBLE LETTER LOCATIONS
         (0, 3): Cell.Bonus.DOUBLE_LETTER, (0, 11): Cell.Bonus.DOUBLE_LETTER,
@@ -135,6 +156,15 @@ class Grid:
                 column.append(Cell(screen, self.x + x_shift, self.y + y_shift,
                                    self.cell_width, self.cell_height, bonus))
             grid_list.append(column)
+
+        # make the center tile red with a circle in it
+        center_tile = grid_list[math.floor(grid_width / 2)][math.floor(grid_height / 2)]
+        center_tile.set_color(Color('red'))
+        scale_factor = 2 / 3
+        center_symbol = Oval(self.screen, center_tile.get_x(), center_tile.get_y(),
+                             self.cell_width * scale_factor, self.cell_height * scale_factor,
+                             color=Color('white'), border=Color('black'))
+        center_symbol.center(center_tile.get_center())
 
     @staticmethod
     def check_bonus(r, c):
