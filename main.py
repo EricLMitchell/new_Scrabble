@@ -8,7 +8,7 @@ screen = Screen(screen_width, screen_height, "Scrabble")
 
 # size classification
 TILE_SIZE = screen_width / 25
-BOARD_DIMENSION = 15  # dimension value in number of cells
+BOARD_DIMENSION = 15  # dimension value in number of cells, works best when odd
 
 # calculate screen margins
 screen_x_margin = screen_width - (BOARD_DIMENSION * TILE_SIZE)
@@ -84,13 +84,17 @@ class Cell:
     def get_y(self):
         return self.cell.y()
 
+    # revisit getter vs property
     def get_center(self):
         return self.cell.center()
+
+    def contains(self, object):
+        return self.cell.contains(object)
 
 
 class Grid:
     # dictionary storing which cell locations correspond to bonus values
-    bonuses_dict = {
+    bonus_location_dict = {
         # DOUBLE LETTER LOCATIONS
         (0, 3): Cell.Bonus.DOUBLE_LETTER, (0, 11): Cell.Bonus.DOUBLE_LETTER,
         (2, 6): Cell.Bonus.DOUBLE_LETTER, (2, 8): Cell.Bonus.DOUBLE_LETTER,
@@ -145,7 +149,7 @@ class Grid:
         # create rectangle grid
         r = 0
         c = 0
-        grid_list = []
+        self._grid_list = []
 
         for r in range(0, BOARD_DIMENSION):
             column = []  # temporary list to hold the elements in the column
@@ -155,10 +159,10 @@ class Grid:
                 bonus = self.check_bonus(r, c)
                 column.append(Cell(screen, self.x + x_shift, self.y + y_shift,
                                    self.cell_width, self.cell_height, bonus))
-            grid_list.append(column)
+            self._grid_list.append(column)
 
         # make the center tile red with a circle in it
-        center_tile = grid_list[math.floor(grid_width / 2)][math.floor(grid_height / 2)]
+        center_tile = self._grid_list[math.floor(grid_width / 2)][math.floor(grid_height / 2)]
         center_tile.set_color(Color('red'))
         scale_factor = 2 / 3
         center_symbol = Oval(self.screen, center_tile.get_x(), center_tile.get_y(),
@@ -174,12 +178,112 @@ class Grid:
         :param c: column of the cell
         :return: Cell.Bonus value
         """
-        if (r, c) not in Grid.bonuses_dict:
+        if (r, c) not in Grid.bonus_location_dict:
             return Cell.Bonus.NONE
         else:
-            return Grid.bonuses_dict[(r, c)]
+            return Grid.bonus_location_dict[(r, c)]
+
+    @property
+    def grid_list(self):
+        return self._grid_list
+
+
+class Tile:
+    def __init__(self, screen, x, y, tile_width, tile_height, letter=''):
+        self.screen = screen
+
+        self.x = x
+        self.y = y
+
+        self.tile_width = tile_width
+        self.tile_height = tile_height
+
+        # make any inserted string uppercase
+        letter = letter.upper()
+        self._letter = letter
+
+        self.tile = Rectangle(screen, self.x, self.y, self.tile_width, self.tile_height,
+                              color=Color('tan'), border=Color('black'))
+
+        self.text = Text(self.screen, self.letter, self.tile.x(), self.tile.y(),
+                         bold=True, color=Color('Black'), size=24)
+        self.text.center(self.tile.center())
+
+        self._selected = False
+
+    @property
+    def letter(self):
+        return self._letter
+
+    @letter.setter
+    def letter(self, new_letter):
+        self._letter = new_letter
+
+        # update the text
+        self.text.text(new_letter)
+        self.text.center(self.tile.center())
+
+    # contains method for drag-n-drop
+    def contains(self, location):
+        return self.tile.contains(location)
+
+    def center(self):
+        return self.tile.center()
+
+    def center(self, location):
+        self.tile.center(location)
+        self.text.center(self.tile.center())
+
+    @property
+    def selected(self):
+        return self._selected
+
+    @selected.setter
+    def selected(self, selected):
+        self._selected = selected
 
 
 board = Grid(screen, grid_start_x, grid_start_y, BOARD_DIMENSION, BOARD_DIMENSION, TILE_SIZE, TILE_SIZE)
+test_tile = Tile(screen, 10, 10, TILE_SIZE, TILE_SIZE, 'C')
 
+# list containing all usable game tiles
+all_tiles = [test_tile]
+
+
+# Mouse Functions in pydraw package
+class Mouse(Enum):
+    LEFT = 1
+    MIDDLE = 2
+    RIGHT = 3
+
+
+def mouseup(location, button):
+    for tile in all_tiles:
+        # if the cell is occupied, do not snap
+        # otherwise, snap
+        tile.selected = False
+
+
+def mousedown(location, button):
+    # select a tile/tell which tile is selected
+    for tile in all_tiles:
+        if tile.contains(location):
+            tile.selected = True
+
+
+def mousedrag(location, button):
+    for tile in all_tiles:
+        if tile.selected:
+            tile.center(location)
+
+
+# make the tile follow the mouse center
+
+screen.listen()
+
+running = True
+FPS = 30
+while running:
+    screen.update()
+    screen.sleep(1 / FPS)
 screen.stop()
